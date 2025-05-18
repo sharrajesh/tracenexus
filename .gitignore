@@ -1,0 +1,117 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Poetry
+poetry.lock
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets
+.env
+
+# Coverage
+*.coverage
+*.coverage.*
+*.cache
+*.hypothesis/
+*.pytest_cache/
+pip-wheel-metadata/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+instance/
+.webassets-cache
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Poetry
+# If you choose to vendor Poetry locally
+# .poetry/
+# poetry.lock is usually committed, but .pids is not
+poetry.lock.old
+*.pids
+
+# Build artifacts
+*.tar.gz
+*.whl
+
+# IDE / Editor
+*.swp
+*.swo
+*~
+
+# Poetry
+# If you choose to vendor Poetry locally
+# .poetry/
+# poetry.lock is usually committed, but .pids is not
+poetry.lock.old
+*.pids
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+*.egg
+*.tar.gz
+*.whl
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Secrets
+*.env
+secrets.toml 
+
+
+# Cursor
+.cursor/
