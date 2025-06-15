@@ -31,7 +31,7 @@ async def main():
             print("Skipping tool invocation as no tools were found.")
             return
         langsmith_trace_id = "96e32516-590a-47c5-9510-72194ee02937"
-        langsmith_get_tool_name = "langsmith.get_trace"
+        langsmith_get_tool_name = "langsmith_get_trace"
         langsmith_get_tool = next(
             (t for t in tools if t.name == langsmith_get_tool_name), None
         )
@@ -52,7 +52,7 @@ async def main():
             )
 
         langfuse_trace_id = "fe8c36d8-ef31-41ea-8899-f735fb4872fa"
-        langfuse_get_tool_name = "langfuse.get_trace"
+        langfuse_get_tool_name = "langfuse_get_trace"
         langfuse_get_tool = next(
             (t for t in tools if t.name == langfuse_get_tool_name), None
         )

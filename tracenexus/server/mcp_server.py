@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 from typing import cast
 
 from fastmcp import FastMCP
@@ -11,48 +12,74 @@ logger = logging.getLogger(__name__)
 
 class TraceNexusServer:
     def __init__(self):
-        self.mcp = FastMCP("TraceNexus")
+        # Create two FastMCP instances - one for each transport
+        self.mcp_http = FastMCP("TraceNexus-HTTP")
+        self.mcp_sse = FastMCP("TraceNexus-SSE")
         # Instantiate providers
         self.langsmith_provider = LangSmithProvider()
         self.langfuse_provider = LangfuseProvider()
         self.register_tools()
 
     def register_tools(self):
-        @self.mcp.tool(name="langsmith.get_trace")  # Explicit tool name
-        async def langsmith_get_trace(
-            trace_id: str,
-        ) -> str:  # Return type is str (YAML)
-            result = await self.langsmith_provider.get_trace(trace_id)
-            return cast(str, result)
+        # Register tools on both FastMCP instances
+        for mcp_instance in [self.mcp_http, self.mcp_sse]:
 
-        @self.mcp.tool(name="langfuse.get_trace")  # Explicit tool name
-        async def langfuse_get_trace(trace_id: str) -> str:  # Return type is str (YAML)
-            result = await self.langfuse_provider.get_trace(trace_id)
-            return cast(str, result)
+            @mcp_instance.tool(name="langsmith_get_trace")  # Explicit tool name
+            async def langsmith_get_trace(
+                trace_id: str,
+            ) -> str:  # Return type is str (YAML)
+                result = await self.langsmith_provider.get_trace(trace_id)
+                return cast(str, result)
+
+            @mcp_instance.tool(name="langfuse_get_trace")  # Explicit tool name
+            async def langfuse_get_trace(
+                trace_id: str,
+            ) -> str:  # Return type is str (YAML)
+                result = await self.langfuse_provider.get_trace(trace_id)
+                return cast(str, result)
 
         # Add other provider tools here as they are developed  # e.g., datadog_get_trace, newrelic_get_trace
 
     def run(
         self,
-        transport: str = "streamable-http",
-        port: int = 8000,
+        http_port: int = 52734,
+        sse_port: int = 52735,
         mount_path: str = "/mcp",
+        host: str = "127.0.0.1",
     ):
-        if transport != "streamable-http":
-            raise ValueError(
-                f"Unsupported transport: {transport}. Only 'streamable-http' is supported."
+        logger.info("Starting TraceNexus with DUAL transport support:")
+        logger.info(
+            f"  📡 Streamable-HTTP (Cursor): http://{host}:{http_port}{mount_path}"
+        )
+        logger.info(f"  🌊 SSE (Windsurf): http://{host}:{sse_port}/sse")
+
+        # Start both transports in separate processes
+        def run_http_server():
+            logger.info(f"Starting HTTP transport on port {http_port}")
+            self.mcp_http.run(
+                transport="streamable-http",
+                port=http_port,
+                path=mount_path,
             )
 
-        run_args = {
-            "transport": "streamable-http",
-            "port": port,
-            "path": mount_path,
-        }
-        log_message_parts = [
-            f"transport={run_args['transport']}",
-            f"port={port}",
-            f"path={mount_path}",
-        ]
+        def run_sse_server():
+            logger.info(f"Starting SSE transport on port {sse_port}")
+            self.mcp_sse.run(
+                transport="sse",
+                host=host,
+                port=sse_port,
+                path="/sse",
+            )
 
-        logger.info(f"Running MCP server with {', '.join(log_message_parts)}")
-        self.mcp.run(**run_args)
+        # Start HTTP server in a separate process
+        http_process = multiprocessing.Process(target=run_http_server, daemon=True)
+        http_process.start()
+
+        # Start SSE server in main thread (so Ctrl+C works properly)
+        try:
+            run_sse_server()
+        except KeyboardInterrupt:
+            logger.info("Shutting down TraceNexus server...")
+        except Exception as e:
+            logger.error(f"Error running server: {e}")
+            raise

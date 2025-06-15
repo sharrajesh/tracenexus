@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tracenexus"
-version = "0.1.4"
+version = "0.1.5"
 description = "A platform-agnostic MCP server for LLM observability"
 authors = ["Rajesh Sharma <sharrajesh@gmail.com>"]
 readme = "README.md"

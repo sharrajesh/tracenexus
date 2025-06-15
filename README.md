@@ -7,15 +7,18 @@
 >
 > Please DM the author if you have any comments, suggestions, or would like to contribute!
 
-A platform-agnostic MCP (Model Context Protocol) server for LLM observability, supporting platforms like LangSmith and Langfuse. It uses FastMCP 2.0 and the `streamable-http` transport.
+A platform-agnostic MCP (Model Context Protocol) server for LLM observability, supporting platforms like LangSmith and Langfuse. It runs **both** transport protocols simultaneously: `streamable-http` (for Cursor) and `SSE` (for Windsurf) using FastMCP 2.0.
 
 ## Features
 
 - 🔄 Support for multiple tracing platforms through a unified interface
 - 🛠️ MCP tools for retrieving and analyzing traces
 - 📊 Trace comparison across different platforms
-- 🔌 HTTP-based transport protocol (`streamable-http` using FastMCP 2.0)
+- 🚀 **Dual transport support**: Runs both `streamable-http` and `SSE` simultaneously
+- 📡 **Cursor compatibility**: `streamable-http` transport on port 52734
+- 🌊 **Windsurf compatibility**: `SSE` transport on port 52735  
 - 🧩 Easy integration with LangSmith and LangFuse
+- 🔧 Use both clients at the same time with one server
 
 ## Quick Start (for End Users)
 
@@ -65,38 +68,63 @@ Once installed and configured, run the server using:
 tracenexus
 ```
 
-This will start the server, typically listening on `http://localhost:8000/mcp`.
-To see all available command-line options, including changing the port, or mount path:
+This will start **both transport protocols simultaneously**:
+- **📡 Streamable-HTTP** (Cursor): `http://localhost:52734/mcp`
+- **🌊 SSE** (Windsurf): `http://localhost:52735/sse`
+
+To see all available command-line options, including changing ports:
 ```bash
 tracenexus --help
 ```
 
-### 5. Using with MCP Client Applications (e.g., Cursor, Codium)
+**Custom ports example:**
+```bash
+tracenexus --http-port 8000 --sse-port 8001
+```
 
-To configure TraceNexus as an MCP server in client applications that support Model Context Protocol (like Cursor or Codium):
+### 5. Using with MCP Client Applications
+
+TraceNexus runs both transport protocols simultaneously, so you can use **Cursor and Windsurf at the same time**!
+
+#### For Cursor (Streamable-HTTP)
 
 1.  Ensure the TraceNexus server is running (e.g., via `tracenexus`).
-2.  In your client application's MCP server settings, add a configuration similar to the following:
+2.  In Cursor's MCP server settings, add:
 
 ```json
 {
   "mcpServers": {
     "tracenexus": {
       "transport": "streamable-http",
-      "url": "http://localhost:8000/mcp" 
+      "url": "http://localhost:52734/mcp" 
     }
   }
 }
 ```
 
-This tells the client to connect to your local TraceNexus server. The `url` should match the host, port, and mount path your TraceNexus server is using (default is `http://localhost:8000/mcp`).
+#### For Windsurf (SSE)
+
+1.  Ensure the TraceNexus server is running (e.g., via `tracenexus`).
+2.  In Windsurf's MCP server settings, add:
+
+```json
+{
+  "mcpServers": {
+    "tracenexus": {
+      "serverUrl": "http://localhost:52735/sse"
+    }
+  }
+}
+```
+
+**Note**: Both configurations can be used simultaneously with the same server instance!
 
 ## Available Tools
 
 Once running, the server exposes the following MCP tools:
 
--   **`langsmith.get_trace`**: Retrieve a single trace by ID from LangSmith.
--   **`langfuse.get_trace`**: Retrieve a single trace by ID from Langfuse.
+-   **`langsmith_get_trace`**: Retrieve a single trace by ID from LangSmith.
+-   **`langfuse_get_trace`**: Retrieve a single trace by ID from Langfuse.
 
 An example Python client showing how to connect and use these tools can be found in `examples/client.py`.
 
@@ -127,7 +155,7 @@ Follow the same `.env` file configuration steps outlined in "Quick Start (for En
 ### 4. Running the Server (from Source)
 
 ```bash
-# Run the TraceNexus server (defaults to streamable-http on port 8000 at /mcp)
+# Run the TraceNexus server (runs both transports: HTTP on 52734, SSE on 52735)
 make run
 ```
 This uses `poetry run tracenexus`. You can also run `poetry run tracenexus --help` for options.

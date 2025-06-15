@@ -16,9 +16,9 @@ format: ## Format Python files using isort and black
 	poetry run mypy tracenexus
 
 .PHONY: run
-run: ## Run the TraceNexus MCP server with streamable-http
-	@echo "Starting TraceNexus MCP server..."
-	poetry run tracenexus --transport streamable-http --port 8000 --mount-path /mcp
+run: ## Run the TraceNexus MCP server with both transports
+	@echo "Starting TraceNexus MCP server (dual transport)..."
+	poetry run tracenexus --http-port 52734 --sse-port 52735 --mount-path /mcp
 
 .PHONY: install-dev
 install-dev: lock ## Install development dependencies
