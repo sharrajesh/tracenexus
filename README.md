@@ -16,9 +16,10 @@ A platform-agnostic MCP (Model Context Protocol) server for LLM observability, s
 - 📊 Trace comparison across different platforms
 - 🚀 **Dual transport support**: Runs both `streamable-http` and `SSE` simultaneously
 - 📡 **Cursor compatibility**: `streamable-http` transport on port 52734
-- 🌊 **Windsurf compatibility**: `SSE` transport on port 52735  
+- 🌊 **Windsurf compatibility**: `SSE` transport on port 52735
+- 🤖 **Claude Code compatibility**: Full MCP integration support
 - 🧩 Easy integration with LangSmith and LangFuse
-- 🔧 Use both clients at the same time with one server
+- 🔧 Use multiple clients at the same time with one server
 
 ## Quick Start (for End Users)
 
@@ -84,7 +85,25 @@ tracenexus --http-port 8000 --sse-port 8001
 
 ### 5. Using with MCP Client Applications
 
-TraceNexus runs both transport protocols simultaneously, so you can use **Cursor and Windsurf at the same time**!
+TraceNexus runs both transport protocols simultaneously, so you can use **Claude Code, Cursor, and Windsurf at the same time**!
+
+#### For Claude Code
+
+1. **Follow steps 1-3 from the Quick Start section above** to install TraceNexus and set up your `.env` file with API keys.
+
+2. **Start the TraceNexus server:**
+   ```bash
+   tracenexus
+   ```
+
+3. **Add TraceNexus to Claude Code using the CLI:**
+   ```bash
+   claude mcp add --transport sse tracenexus http://localhost:52735/sse
+   ```
+
+That's it! Claude Code can now use the `langsmith_get_trace` and `langfuse_get_trace` tools.
+
+To verify it's working, you can ask Claude: "What MCP tools do you have available?"
 
 #### For Cursor (Streamable-HTTP)
 
