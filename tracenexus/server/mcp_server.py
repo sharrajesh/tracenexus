@@ -1,44 +1,106 @@
 import logging
 import multiprocessing
-from typing import cast
+from typing import Annotated, Dict
 
 from fastmcp import FastMCP
+from pydantic import Field
 
-from ..providers import LangfuseProvider, LangSmithProvider
+from ..providers import (
+    LangfuseProvider,
+    LangfuseProviderFactory,
+    LangSmithProvider,
+    LangSmithProviderFactory,
+)
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class TraceNexusServer:
-    def __init__(self):
+    def __init__(self) -> None:
         # Create two FastMCP instances - one for each transport
-        self.mcp_http = FastMCP("TraceNexus-HTTP")
-        self.mcp_sse = FastMCP("TraceNexus-SSE")
-        # Instantiate providers
-        self.langsmith_provider = LangSmithProvider()
-        self.langfuse_provider = LangfuseProvider()
+        self.mcp_http: FastMCP = FastMCP("TraceNexus-HTTP")
+        self.mcp_sse: FastMCP = FastMCP("TraceNexus-SSE")
+
+        # Instantiate LangSmith providers (multiple instances)
+        self.langsmith_providers: Dict[str, LangSmithProvider] = {}
+        for name, provider in LangSmithProviderFactory.create_providers():  # type: ignore[assignment]
+            self.langsmith_providers[name] = provider  # type: ignore[assignment]
+
+        # Instantiate Langfuse providers (multiple instances)
+        self.langfuse_providers: Dict[str, LangfuseProvider] = {}
+        for name, provider in LangfuseProviderFactory.create_providers():  # type: ignore[assignment]
+            self.langfuse_providers[name] = provider  # type: ignore[assignment]
+
         self.register_tools()
 
-    def register_tools(self):
+    def create_langsmith_tool(self, provider: LangSmithProvider, name: str):
+        """Create a tool function for a specific LangSmith provider instance."""
+
+        async def tool_func(
+            trace_id: Annotated[
+                str, Field(description="The ID of the trace to retrieve")
+            ],
+        ) -> str:
+            """Get a trace from LangSmith by its ID."""
+            logger.info(f"langsmith_{name}_get_trace called with trace_id: {trace_id}")
+            try:
+                result = await provider.get_trace(trace_id)
+                return result
+            except Exception as e:
+                logger.error(f"Error in langsmith_{name}_get_trace: {e}")
+                raise
+
+        return tool_func
+
+    def create_langfuse_tool(self, provider: LangfuseProvider, name: str):
+        """Create a tool function for a specific Langfuse provider instance."""
+
+        async def tool_func(
+            trace_id: Annotated[
+                str, Field(description="The ID of the trace to retrieve")
+            ],
+        ) -> str:
+            """Get a trace from Langfuse by its ID."""
+            logger.info(f"langfuse_{name}_get_trace called with trace_id: {trace_id}")
+            try:
+                result = await provider.get_trace(trace_id)
+                return result
+            except Exception as e:
+                logger.error(f"Error in langfuse_{name}_get_trace: {e}")
+                raise
+
+        return tool_func
+
+    def register_tools(self) -> None:
         # Register tools on both FastMCP instances
         for mcp_instance in [self.mcp_http, self.mcp_sse]:
+            logger.info(f"Registering tools for {mcp_instance.name}")
 
-            @mcp_instance.tool(name="langsmith_get_trace")  # Explicit tool name
-            async def langsmith_get_trace(
-                trace_id: str,
-            ) -> str:  # Return type is str (YAML)
-                result = await self.langsmith_provider.get_trace(trace_id)
-                return cast(str, result)
+            # Register a tool for each LangSmith instance
+            for name, provider in self.langsmith_providers.items():
+                tool_name = f"langsmith_{name}_get_trace"
+                logger.info(f"Registering tool: {tool_name}")
 
-            @mcp_instance.tool(name="langfuse_get_trace")  # Explicit tool name
-            async def langfuse_get_trace(
-                trace_id: str,
-            ) -> str:  # Return type is str (YAML)
-                result = await self.langfuse_provider.get_trace(trace_id)
-                return cast(str, result)
+                # Create and register the tool
+                tool_func = self.create_langsmith_tool(provider, name)
+                mcp_instance.tool(
+                    name=tool_name,
+                    description=f"Get a trace from LangSmith instance '{name}' by trace ID",
+                )(tool_func)
 
-        # Add other provider tools here as they are developed  # e.g., datadog_get_trace, newrelic_get_trace
+            # Register a tool for each Langfuse instance
+            for name, provider in self.langfuse_providers.items():  # type: ignore[assignment]
+                tool_name = f"langfuse_{name}_get_trace"
+                logger.info(f"Registering tool: {tool_name}")
+
+                # Create and register the tool
+                tool_func = self.create_langfuse_tool(provider, name)  # type: ignore[arg-type]
+                mcp_instance.tool(
+                    name=tool_name,
+                    description=f"Get a trace from Langfuse instance '{name}' by trace ID",
+                )(tool_func)
+
+        logger.info("Tool registration complete")
 
     def run(
         self,
@@ -55,20 +117,13 @@ class TraceNexusServer:
 
         # Start both transports in separate processes
         def run_http_server():
+            # Create a new server instance in this process for HTTP
+            server = TraceNexusServer()
             logger.info(f"Starting HTTP transport on port {http_port}")
-            self.mcp_http.run(
+            server.mcp_http.run(
                 transport="streamable-http",
                 port=http_port,
                 path=mount_path,
-            )
-
-        def run_sse_server():
-            logger.info(f"Starting SSE transport on port {sse_port}")
-            self.mcp_sse.run(
-                transport="sse",
-                host=host,
-                port=sse_port,
-                path="/sse",
             )
 
         # Start HTTP server in a separate process
@@ -76,10 +131,18 @@ class TraceNexusServer:
         http_process.start()
 
         # Start SSE server in main thread (so Ctrl+C works properly)
+        # This uses the existing server instance created by CLI
         try:
-            run_sse_server()
+            logger.info(f"Starting SSE transport on port {sse_port}")
+            self.mcp_sse.run(
+                transport="sse",
+                host=host,
+                port=sse_port,
+                path="/sse",
+            )
         except KeyboardInterrupt:
             logger.info("Shutting down TraceNexus server...")
+            http_process.terminate()
         except Exception as e:
             logger.error(f"Error running server: {e}")
             raise

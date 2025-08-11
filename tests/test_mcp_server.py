@@ -25,13 +25,22 @@ def server_setup():
         return decorator
 
     with patch(
-        "tracenexus.server.mcp_server.LangSmithProvider"
-    ) as MockLangSmithProvider, patch(
-        "tracenexus.server.mcp_server.LangfuseProvider"
-    ) as MockLangfuseProvider:
+        "tracenexus.server.mcp_server.LangSmithProviderFactory"
+    ) as MockLangSmithProviderFactory, patch(
+        "tracenexus.server.mcp_server.LangfuseProviderFactory"
+    ) as MockLangfuseProviderFactory:
 
-        mock_ls_provider_instance = MockLangSmithProvider.return_value
-        mock_lf_provider_instance = MockLangfuseProvider.return_value
+        # Create mock LangSmith providers
+        mock_ls_provider_instance = MagicMock()
+        MockLangSmithProviderFactory.create_providers.return_value = [
+            ("test", mock_ls_provider_instance)
+        ]
+
+        # Create mock Langfuse providers
+        mock_lf_provider_instance = MagicMock()
+        MockLangfuseProviderFactory.create_providers.return_value = [
+            ("test", mock_lf_provider_instance)
+        ]
 
         # Instantiate the server
         server_instance = TraceNexusServer()
@@ -64,15 +73,15 @@ def test_server_initialization(server_setup):
     # Verify names were passed to the tool decorator
     call_args_list = mock_mcp_instance.tool.call_args_list
     assert any(
-        call.kwargs.get("name") == "langsmith_get_trace" for call in call_args_list
+        call.kwargs.get("name") == "langsmith_test_get_trace" for call in call_args_list
     )
     assert any(
-        call.kwargs.get("name") == "langfuse_get_trace" for call in call_args_list
+        call.kwargs.get("name") == "langfuse_test_get_trace" for call in call_args_list
     )
 
     # Verify that the tools were captured
-    assert "langsmith_get_trace" in captured_tools
-    assert "langfuse_get_trace" in captured_tools
+    assert "langsmith_test_get_trace" in captured_tools
+    assert "langfuse_test_get_trace" in captured_tools
 
     # Since we replaced the run logic, we can't test it this way anymore.
     # To test run, we'd need a more complex setup with processes.
@@ -90,8 +99,10 @@ async def test_langsmith_get_trace_tool(server_setup):
 
     mock_ls_provider_instance.get_trace = AsyncMock(return_value="yaml_trace_output_ls")
 
-    langsmith_tool_func = captured_tools.get("langsmith_get_trace")
-    assert langsmith_tool_func is not None, "Langsmith get_trace tool was not captured"
+    langsmith_tool_func = captured_tools.get("langsmith_test_get_trace")
+    assert (
+        langsmith_tool_func is not None
+    ), "Langsmith test get_trace tool was not captured"
 
     # Call the captured tool function
     # The first argument to the tool function will be `self` (the server_instance)
@@ -108,8 +119,10 @@ async def test_langfuse_get_trace_tool(server_setup):
 
     mock_lf_provider_instance.get_trace = AsyncMock(return_value="yaml_trace_output_lf")
 
-    langfuse_tool_func = captured_tools.get("langfuse_get_trace")
-    assert langfuse_tool_func is not None, "Langfuse get_trace tool was not captured"
+    langfuse_tool_func = captured_tools.get("langfuse_test_get_trace")
+    assert (
+        langfuse_tool_func is not None
+    ), "Langfuse test get_trace tool was not captured"
 
     # Call the captured tool function
     result = await langfuse_tool_func(trace_id="lf_trace_456")

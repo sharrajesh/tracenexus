@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 async def main():
-    mcp_server_url = "http://localhost:8000/mcp"  # Default server URL
+    mcp_server_url = "http://localhost:52734/mcp"  # Updated to use correct port
     server_key = "tracenexus_server"
     mcp_config = {
         server_key: {
@@ -30,44 +30,57 @@ async def main():
         if not tools:
             print("Skipping tool invocation as no tools were found.")
             return
+
+        # Example: Using LangSmith tools (now with instance names)
+        # Tool names follow pattern: langsmith_<instance_name>_get_trace
         langsmith_trace_id = "96e32516-590a-47c5-9510-72194ee02937"
-        langsmith_get_tool_name = "langsmith_get_trace"
-        langsmith_get_tool = next(
-            (t for t in tools if t.name == langsmith_get_tool_name), None
-        )
-        if langsmith_get_tool:
+
+        # Try to find any LangSmith tool (e.g., langsmith_prod_get_trace)
+        langsmith_tools = [
+            t
+            for t in tools
+            if t.name.startswith("langsmith_") and t.name.endswith("_get_trace")
+        ]
+        if langsmith_tools:
+            # Use the first available LangSmith tool
+            langsmith_tool = langsmith_tools[0]
             print(
-                f"\nAttempting to get details for trace '{langsmith_trace_id}' using '{langsmith_get_tool_name}':"
+                f"\nAttempting to get details for trace '{langsmith_trace_id}' using '{langsmith_tool.name}':"
             )
             try:
-                trace = await langsmith_get_tool.ainvoke(
-                    {"trace_id": langsmith_trace_id}
-                )
+                trace = await langsmith_tool.ainvoke({"trace_id": langsmith_trace_id})
                 print(f"Trace details (from LangSmith): {trace}")
             except Exception as e:
                 print(f"Error during LangSmith tool invocation: {e}")
         else:
             print(
-                f"\nTool '{langsmith_get_tool_name}' not found. Skipping LangSmith get_trace example."
+                "\nNo LangSmith tools found. Make sure LANGSMITH_API_KEYS is configured."
             )
 
+        # Example: Using Langfuse tools (now with instance names)
+        # Tool names follow pattern: langfuse_<instance_name>_get_trace
         langfuse_trace_id = "fe8c36d8-ef31-41ea-8899-f735fb4872fa"
-        langfuse_get_tool_name = "langfuse_get_trace"
-        langfuse_get_tool = next(
-            (t for t in tools if t.name == langfuse_get_tool_name), None
-        )
-        if langfuse_get_tool:
+
+        # Try to find any Langfuse tool (e.g., langfuse_prod_get_trace)
+        langfuse_tools = [
+            t
+            for t in tools
+            if t.name.startswith("langfuse_") and t.name.endswith("_get_trace")
+        ]
+        if langfuse_tools:
+            # Use the first available Langfuse tool
+            langfuse_tool = langfuse_tools[0]
             print(
-                f"\nAttempting to get details for trace '{langfuse_trace_id}' using '{langfuse_get_tool_name}':"
+                f"\nAttempting to get details for trace '{langfuse_trace_id}' using '{langfuse_tool.name}':"
             )
             try:
-                trace = await langfuse_get_tool.ainvoke({"trace_id": langfuse_trace_id})
+                trace = await langfuse_tool.ainvoke({"trace_id": langfuse_trace_id})
                 print(f"Trace details (from Langfuse): {trace}")
             except Exception as e:
                 print(f"Error during Langfuse tool invocation: {e}")
         else:
             print(
-                f"\nTool '{langfuse_get_tool_name}' not found. Skipping Langfuse get_trace example."
+                "\nNo Langfuse tools found. Make sure LANGFUSE_PUBLIC_KEYS, LANGFUSE_SECRET_KEYS, and LANGFUSE_HOSTS are configured."
             )
 
 

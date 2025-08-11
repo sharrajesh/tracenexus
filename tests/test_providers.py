@@ -7,12 +7,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from tracenexus.providers.langfuse import LangfuseProvider
-from tracenexus.providers.langsmith import LangSmithProvider
+from tracenexus.providers.langfuse import LangfuseProvider, LangfuseProviderFactory
+from tracenexus.providers.langsmith import LangSmithProvider, LangSmithProviderFactory
 
 
 @pytest.mark.asyncio
-async def test_langsmith_provider_get_trace():
+async def test_langsmith_provider_get_trace_success():
     """Test LangSmithProvider.get_trace functionality."""
     dummy_uuid = str(uuid.uuid4())
     start_time_obj = datetime.now()
@@ -48,7 +48,7 @@ async def test_langsmith_provider_get_trace():
         mock_langsmith_client_instance = MockLangsmithClientConstructor.return_value
         mock_langsmith_client_instance.read_run = MagicMock(return_value=mock_run_obj)
 
-        provider = LangSmithProvider()
+        provider = LangSmithProvider(api_key="test_api_key", name="test")
 
         trace_yaml_str = await provider.get_trace(dummy_uuid)
         mock_langsmith_client_instance.read_run.assert_called_once_with(dummy_uuid)
@@ -64,11 +64,78 @@ async def test_langsmith_provider_get_trace():
         assert trace["outputs"] == {"output": "result"}
         assert trace["error"] is None
         assert trace["metadata"] == {}
-        # assert trace["platform"] == "langsmith" # Removed as platform is no longer added
 
 
 @pytest.mark.asyncio
-async def test_langfuse_provider_get_trace():
+async def test_langsmith_provider_get_trace_not_found():
+    """Test LangSmithProvider.get_trace handling of not found errors."""
+
+    with patch(
+        "tracenexus.providers.langsmith.Client"
+    ) as MockLangsmithClientConstructor:
+        mock_langsmith_client_instance = MockLangsmithClientConstructor.return_value
+
+        # Simulate a 404 error
+        mock_langsmith_client_instance.read_run = MagicMock(
+            side_effect=Exception(
+                "404 Client Error: Not Found for url: https://api.smith.langchain.com/runs/xyz"
+            )
+        )
+
+        provider = LangSmithProvider(api_key="test_api_key", name="test")
+
+        result = await provider.get_trace("non-existent-trace-id")
+
+        assert "Trace not found in test" in result
+        assert "non-existent-trace-id" in result
+        mock_langsmith_client_instance.read_run.assert_called_once_with(
+            "non-existent-trace-id"
+        )
+
+
+@pytest.mark.asyncio
+async def test_langsmith_provider_factory():
+    """Test LangSmithProviderFactory creates multiple providers correctly."""
+
+    # Test with matching keys and names
+    with patch.dict(
+        os.environ,
+        {"LANGSMITH_API_KEYS": "key1,key2,key3", "LANGSMITH_NAMES": "prod,dev,test"},
+    ):
+        with patch("tracenexus.providers.langsmith.Client"):
+            providers = LangSmithProviderFactory.create_providers()
+
+            assert len(providers) == 3
+            assert providers[0][0] == "prod"
+            assert providers[1][0] == "dev"
+            assert providers[2][0] == "test"
+
+            # Check that each provider has the correct name
+            assert providers[0][1].name == "prod"
+            assert providers[1][1].name == "dev"
+            assert providers[2][1].name == "test"
+
+    # Test with missing names (should auto-generate)
+    with patch.dict(
+        os.environ, {"LANGSMITH_API_KEYS": "key1,key2", "LANGSMITH_NAMES": ""}
+    ):
+        with patch("tracenexus.providers.langsmith.Client"):
+            providers = LangSmithProviderFactory.create_providers()
+
+            assert len(providers) == 2
+            assert providers[0][0] == "instance1"
+            assert providers[1][0] == "instance2"
+
+    # Test with no keys configured
+    with patch.dict(
+        os.environ, {"LANGSMITH_API_KEYS": "example", "LANGSMITH_NAMES": ""}
+    ):
+        providers = LangSmithProviderFactory.create_providers()
+        assert len(providers) == 0
+
+
+@pytest.mark.asyncio
+async def test_langfuse_provider_get_trace_success():
     """Test LangfuseProvider.get_trace functionality."""
     dummy_trace_id = "lf-trace-abc-123"
     start_time_obj = datetime.now()
@@ -122,11 +189,12 @@ async def test_langfuse_provider_get_trace():
             return_value=mock_fetch_response_obj
         )
 
-        with patch.dict(
-            os.environ,
-            {"LANGFUSE_PUBLIC_KEY": "dummy_pk", "LANGFUSE_SECRET_KEY": "dummy_sk"},
-        ):
-            provider = LangfuseProvider()
+        provider = LangfuseProvider(
+            public_key="dummy_pk",
+            secret_key="dummy_sk",
+            host="https://cloud.langfuse.com",
+            name="test",
+        )
 
         trace_yaml_str = await provider.get_trace(dummy_trace_id)
 
@@ -153,3 +221,104 @@ async def test_langfuse_provider_get_trace():
             )
         except yaml.YAMLError:
             pytest.fail("Output was not valid YAML")
+
+
+@pytest.mark.asyncio
+async def test_langfuse_provider_get_trace_not_found():
+    """Test LangfuseProvider.get_trace handling of not found errors."""
+
+    with patch(
+        "tracenexus.providers.langfuse.Langfuse"
+    ) as MockLangfuseClientConstructor:
+        mock_langfuse_client_instance = MockLangfuseClientConstructor.return_value
+
+        # Simulate a not found error
+        mock_langfuse_client_instance.fetch_trace = MagicMock(
+            side_effect=Exception("Trace not found")
+        )
+
+        provider = LangfuseProvider(
+            public_key="test_pk",
+            secret_key="test_sk",
+            host="https://test.com",
+            name="test",
+        )
+
+        result = await provider.get_trace("non-existent-trace-id")
+
+        assert "Trace not found in test" in result
+        assert "non-existent-trace-id" in result
+        mock_langfuse_client_instance.fetch_trace.assert_called_once_with(
+            "non-existent-trace-id"
+        )
+
+
+@pytest.mark.asyncio
+async def test_langfuse_provider_factory():
+    """Test LangfuseProviderFactory creates multiple providers correctly."""
+
+    # Test with matching keys, secrets, hosts, and names
+    with patch.dict(
+        os.environ,
+        {
+            "LANGFUSE_PUBLIC_KEYS": "pub1,pub2,pub3",
+            "LANGFUSE_SECRET_KEYS": "sec1,sec2,sec3",
+            "LANGFUSE_HOSTS": "https://host1.com,https://host2.com,https://host3.com",
+            "LANGFUSE_NAMES": "prod,dev,test",
+        },
+    ):
+        with patch("tracenexus.providers.langfuse.Langfuse"):
+            providers = LangfuseProviderFactory.create_providers()
+
+            assert len(providers) == 3
+            assert providers[0][0] == "prod"
+            assert providers[1][0] == "dev"
+            assert providers[2][0] == "test"
+
+            # Check that each provider has the correct name
+            assert providers[0][1].name == "prod"
+            assert providers[1][1].name == "dev"
+            assert providers[2][1].name == "test"
+
+    # Test with missing names (should auto-generate)
+    with patch.dict(
+        os.environ,
+        {
+            "LANGFUSE_PUBLIC_KEYS": "pub1,pub2",
+            "LANGFUSE_SECRET_KEYS": "sec1,sec2",
+            "LANGFUSE_HOSTS": "https://host1.com,https://host2.com",
+            "LANGFUSE_NAMES": "",
+        },
+    ):
+        with patch("tracenexus.providers.langfuse.Langfuse"):
+            providers = LangfuseProviderFactory.create_providers()
+
+            assert len(providers) == 2
+            assert providers[0][0] == "instance1"
+            assert providers[1][0] == "instance2"
+
+    # Test with mismatched keys and secrets (should return empty)
+    with patch.dict(
+        os.environ,
+        {
+            "LANGFUSE_PUBLIC_KEYS": "pub1,pub2",
+            "LANGFUSE_SECRET_KEYS": "sec1",
+            "LANGFUSE_HOSTS": "https://host1.com,https://host2.com",
+            "LANGFUSE_NAMES": "",
+        },
+    ):
+        providers = LangfuseProviderFactory.create_providers()
+        assert len(providers) == 0
+
+    # Test with no keys configured
+    with patch.dict(
+        os.environ,
+        {
+            "LANGFUSE_PUBLIC_KEYS": "example",
+            "LANGFUSE_SECRET_KEYS": "example",
+            "LANGFUSE_HOSTS": "example",
+            "LANGFUSE_NAMES": "",
+        },
+    ):
+        providers = LangfuseProviderFactory.create_providers()
+        assert len(providers) == 0

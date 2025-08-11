@@ -54,11 +54,27 @@ TraceNexus requires API keys for the tracing platforms it supports (e.g., LangSm
 **Example `.env` file:**
 
 ```env
-# Platform API Keys
-LANGSMITH_API_KEY="YOUR_LANGSMITH_API_KEY_HERE"
-# LANGFUSE_PUBLIC_KEY="YOUR_LANGFUSE_PUBLIC_KEY_HERE"
-# LANGFUSE_SECRET_KEY="YOUR_LANGFUSE_SECRET_KEY_HERE"
+# LangSmith Configuration - Multiple Instances Support
+# Comma-separated API keys for different LangSmith workspaces/projects
+LANGSMITH_API_KEYS="prod-api-key,dev-api-key,test-api-key"
+# Names for each instance (will be used in tool names)
+LANGSMITH_NAMES="prod,dev,test"
+# This creates tools: langsmith_prod_get_trace, langsmith_dev_get_trace, langsmith_test_get_trace
+
+# Langfuse Configuration - Multiple Instances Support
+# Comma-separated configuration for different Langfuse projects/environments
+LANGFUSE_PUBLIC_KEYS="pub-key-1,pub-key-2,pub-key-3"
+LANGFUSE_SECRET_KEYS="secret-key-1,secret-key-2,secret-key-3"
+LANGFUSE_HOSTS="https://cloud.langfuse.com,https://cloud.langfuse.com,https://self-hosted.example.com"
+# Names for each instance (will be used in tool names)
+LANGFUSE_NAMES="prod,dev,test"
+# This creates tools: langfuse_prod_get_trace, langfuse_dev_get_trace, langfuse_test_get_trace
 ```
+
+**Note:** 
+- For LangSmith: The number of names should match the number of API keys
+- For Langfuse: The number of public keys, secret keys, hosts, and names should all match
+- If names are not provided or don't match, auto-generated names (instance1, instance2, etc.) will be used
 
 Refer to `tracenexus/cli.py` (if installed from source) or use `tracenexus --help` for details on how provider-specific API keys are checked at startup.
 
@@ -142,8 +158,15 @@ To verify it's working, you can ask Claude: "What MCP tools do you have availabl
 
 Once running, the server exposes the following MCP tools:
 
--   **`langsmith_get_trace`**: Retrieve a single trace by ID from LangSmith.
--   **`langfuse_get_trace`**: Retrieve a single trace by ID from Langfuse.
+### LangSmith Tools (Multiple Instances)
+-   **`langsmith_<name>_get_trace`**: Retrieve a single trace by ID from a specific LangSmith instance
+    - Example: `langsmith_prod_get_trace`, `langsmith_dev_get_trace`, `langsmith_test_get_trace`
+    - The actual tool names depend on your `LANGSMITH_NAMES` configuration
+
+### Langfuse Tools (Multiple Instances)
+-   **`langfuse_<name>_get_trace`**: Retrieve a single trace by ID from a specific Langfuse instance
+    - Example: `langfuse_prod_get_trace`, `langfuse_dev_get_trace`, `langfuse_test_get_trace`
+    - The actual tool names depend on your `LANGFUSE_NAMES` configuration
 
 An example Python client showing how to connect and use these tools can be found in `examples/client.py`.
 
