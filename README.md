@@ -114,10 +114,14 @@ TraceNexus runs both transport protocols simultaneously, so you can use **Claude
 
 3. **Add TraceNexus to Claude Code using the CLI:**
    ```bash
-   claude mcp add --transport sse tracenexus http://localhost:52735/sse
+   # Recommended: Use streamable-http transport for better stability
+   claude mcp add tracenexus --transport streamable-http --url http://localhost:52734/mcp
+   
+   # Alternative: SSE transport (may have initialization issues)
+   # claude mcp add tracenexus --transport sse --url http://localhost:52735/sse
    ```
 
-That's it! Claude Code can now use the `langsmith_get_trace` and `langfuse_get_trace` tools.
+That's it! Claude Code can now use the trace retrieval tools. Tool names follow the pattern `langsmith_<instance_name>_get_trace` and `langfuse_<instance_name>_get_trace` where instance names come from your configuration (with dashes converted to underscores).
 
 To verify it's working, you can ask Claude: "What MCP tools do you have available?"
 

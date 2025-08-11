@@ -1,9 +1,8 @@
 import logging
 import multiprocessing
-from typing import Annotated, Dict
+from typing import Dict
 
 from fastmcp import FastMCP
-from pydantic import Field
 
 from ..providers import (
     LangfuseProvider,
@@ -36,12 +35,15 @@ class TraceNexusServer:
     def create_langsmith_tool(self, provider: LangSmithProvider, name: str):
         """Create a tool function for a specific LangSmith provider instance."""
 
-        async def tool_func(
-            trace_id: Annotated[
-                str, Field(description="The ID of the trace to retrieve")
-            ],
-        ) -> str:
-            """Get a trace from LangSmith by its ID."""
+        async def tool_func(trace_id: str) -> str:
+            """Get a trace from LangSmith by its ID.
+
+            Args:
+                trace_id: The ID of the trace to retrieve
+
+            Returns:
+                The trace data in YAML format
+            """
             logger.info(f"langsmith_{name}_get_trace called with trace_id: {trace_id}")
             try:
                 result = await provider.get_trace(trace_id)
@@ -55,12 +57,15 @@ class TraceNexusServer:
     def create_langfuse_tool(self, provider: LangfuseProvider, name: str):
         """Create a tool function for a specific Langfuse provider instance."""
 
-        async def tool_func(
-            trace_id: Annotated[
-                str, Field(description="The ID of the trace to retrieve")
-            ],
-        ) -> str:
-            """Get a trace from Langfuse by its ID."""
+        async def tool_func(trace_id: str) -> str:
+            """Get a trace from Langfuse by its ID.
+
+            Args:
+                trace_id: The ID of the trace to retrieve
+
+            Returns:
+                The trace data in YAML format
+            """
             logger.info(f"langfuse_{name}_get_trace called with trace_id: {trace_id}")
             try:
                 result = await provider.get_trace(trace_id)
@@ -78,7 +83,9 @@ class TraceNexusServer:
 
             # Register a tool for each LangSmith instance
             for name, provider in self.langsmith_providers.items():
-                tool_name = f"langsmith_{name}_get_trace"
+                # Sanitize name for Python compatibility (replace dashes with underscores)
+                safe_name = name.replace("-", "_")
+                tool_name = f"langsmith_{safe_name}_get_trace"
                 logger.info(f"Registering tool: {tool_name}")
 
                 # Create and register the tool
@@ -90,7 +97,9 @@ class TraceNexusServer:
 
             # Register a tool for each Langfuse instance
             for name, provider in self.langfuse_providers.items():  # type: ignore[assignment]
-                tool_name = f"langfuse_{name}_get_trace"
+                # Sanitize name for Python compatibility (replace dashes with underscores)
+                safe_name = name.replace("-", "_")
+                tool_name = f"langfuse_{safe_name}_get_trace"
                 logger.info(f"Registering tool: {tool_name}")
 
                 # Create and register the tool

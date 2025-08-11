@@ -20,6 +20,13 @@ run: ## Run the TraceNexus MCP server with both transports
 	@echo "Starting TraceNexus MCP server (dual transport)..."
 	poetry run tracenexus --http-port 52734 --sse-port 52735 --mount-path /mcp
 
+.PHONY: stop
+stop: ## Stop the TraceNexus MCP server by killing processes on ports 52734 and 52735
+	@echo "Stopping TraceNexus MCP server..."
+	@(lsof -ti :52734 2>/dev/null || true) | xargs -r kill -9 2>/dev/null || true
+	@(lsof -ti :52735 2>/dev/null || true) | xargs -r kill -9 2>/dev/null || true
+	@echo "TraceNexus server stopped"
+
 .PHONY: install-dev
 install-dev: lock ## Install development dependencies
 	@echo "Installing development dependencies..."
