@@ -14,6 +14,17 @@ from ..providers import (
 logger = logging.getLogger(__name__)
 
 
+def _run_http_server(http_port: int, mount_path: str) -> None:
+    """Run HTTP server in a separate process. Module-level for pickling."""
+    server = TraceNexusServer()
+    logger.info(f"Starting HTTP transport on port {http_port}")
+    server.mcp_http.run(
+        transport="streamable-http",
+        port=http_port,
+        path=mount_path,
+    )
+
+
 class TraceNexusServer:
     def __init__(self) -> None:
         # Create two FastMCP instances - one for each transport
@@ -124,19 +135,12 @@ class TraceNexusServer:
         )
         logger.info(f"  🌊 SSE (Windsurf): http://{host}:{sse_port}/sse")
 
-        # Start both transports in separate processes
-        def run_http_server():
-            # Create a new server instance in this process for HTTP
-            server = TraceNexusServer()
-            logger.info(f"Starting HTTP transport on port {http_port}")
-            server.mcp_http.run(
-                transport="streamable-http",
-                port=http_port,
-                path=mount_path,
-            )
-
-        # Start HTTP server in a separate process
-        http_process = multiprocessing.Process(target=run_http_server, daemon=True)
+        # Start HTTP server in a separate process (using module-level function for pickling)
+        http_process = multiprocessing.Process(
+            target=_run_http_server,
+            args=(http_port, mount_path),
+            daemon=True,
+        )
         http_process.start()
 
         # Start SSE server in main thread (so Ctrl+C works properly)
