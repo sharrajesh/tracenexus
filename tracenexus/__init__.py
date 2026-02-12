@@ -2,4 +2,4 @@
 TraceNexus: Multi-Platform Tracing MCP Server
 """
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"

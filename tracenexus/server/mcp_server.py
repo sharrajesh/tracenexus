@@ -14,12 +14,13 @@ from ..providers import (
 logger = logging.getLogger(__name__)
 
 
-def _run_http_server(http_port: int, mount_path: str) -> None:
+def _run_http_server(http_port: int, mount_path: str, host: str) -> None:
     """Run HTTP server in a separate process. Module-level for pickling."""
     server = TraceNexusServer()
-    logger.info(f"Starting HTTP transport on port {http_port}")
+    logger.info(f"Starting HTTP transport on {host}:{http_port}")
     server.mcp_http.run(
         transport="streamable-http",
+        host=host,
         port=http_port,
         path=mount_path,
     )
@@ -138,7 +139,7 @@ class TraceNexusServer:
         # Start HTTP server in a separate process (using module-level function for pickling)
         http_process = multiprocessing.Process(
             target=_run_http_server,
-            args=(http_port, mount_path),
+            args=(http_port, mount_path, host),
             daemon=True,
         )
         http_process.start()

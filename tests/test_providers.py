@@ -30,7 +30,7 @@ async def test_langsmith_provider_get_trace_success():
     mock_run_obj.metadata = {}
 
     # Configure the dict method on the mock_run_obj
-    mock_run_obj.dict.return_value = {
+    mock_run_obj.model_dump.return_value = {
         "id": dummy_uuid,
         "name": "Test Run",
         "start_time": start_time_obj,
@@ -174,7 +174,7 @@ async def test_langfuse_provider_get_trace_success():
         "totalCost": 0.0,  # Example value
         "htmlPath": f"/project/p1/traces/{dummy_trace_id}",  # Example value
     }
-    mock_trace_details_obj.dict.return_value = expected_dict_representation
+    mock_trace_details_obj.model_dump.return_value = expected_dict_representation
 
     # This mock represents the FetchTraceResponse object
     mock_fetch_response_obj = MagicMock()

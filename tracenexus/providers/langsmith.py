@@ -39,7 +39,7 @@ class LangSmithProvider:
                 return f"Error fetching trace from {self.name}: {str(e)}"
 
     def normalize_trace(self, run: Any) -> str:
-        trace_as_dict = run.dict()
+        trace_as_dict = run.model_dump()
         return yaml.dump(
             trace_as_dict, sort_keys=False, indent=2, default_flow_style=False
         )

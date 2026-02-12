@@ -50,7 +50,7 @@ class LangfuseProvider:
                 return f"Error fetching trace from {self.name}: {str(e)}"
 
     def normalize_trace(self, trace_data: Any) -> str:
-        trace_as_dict = trace_data.dict()
+        trace_as_dict = trace_data.model_dump()
         return yaml.dump(
             trace_as_dict,
             sort_keys=False,
