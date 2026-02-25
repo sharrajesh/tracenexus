@@ -134,7 +134,7 @@ class TraceNexusServer:
         logger.info(
             f"  📡 Streamable-HTTP (Cursor): http://{host}:{http_port}{mount_path}"
         )
-        logger.info(f"  🌊 SSE (Windsurf): http://{host}:{sse_port}/sse")
+        logger.info(f"  🌊 SSE: http://{host}:{sse_port}/sse")
 
         # Start HTTP server in a separate process (using module-level function for pickling)
         http_process = multiprocessing.Process(

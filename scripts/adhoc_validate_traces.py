@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Validate known Langfuse traces against configured instances.
-
-This script checks whether known trace IDs are retrievable for each expected
-project alias defined in `validation/langfuse_trace_ids.json`.
-"""
+"""Internal ad-hoc validation for known Langfuse trace IDs."""
 
 from __future__ import annotations
 
@@ -21,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tracenexus.providers.langfuse import LangfuseProviderFactory
 
+
 DEFAULT_TRACE_FILE = "validation/langfuse_trace_ids.json"
 
 
@@ -36,7 +33,7 @@ def _resolve_provider_name(alias: str, providers: Dict[str, object]) -> str | No
     if normalized_alias in normalized_map:
         return normalized_map[normalized_alias]
 
-    # Support suffix matching (e.g., "something-dev").
+    # Then support suffix matching (e.g., "team-dev").
     for normalized_name, original_name in normalized_map.items():
         if normalized_name.endswith(f"-{normalized_alias}"):
             return original_name
@@ -87,22 +84,24 @@ async def _run_validation(trace_file: Path) -> int:
         print(f"Validation failed: {failures} project(s) failed.")
         return 1
 
-    print("Validation passed: all configured trace checks succeeded.")
+    print("Validation passed: all configured ad-hoc trace checks succeeded.")
     return 0
 
 
 def main() -> int:
     load_dotenv(find_dotenv())
 
-    parser = argparse.ArgumentParser(description="Validate known Langfuse traces.")
+    parser = argparse.ArgumentParser(description="Run ad-hoc Langfuse trace checks.")
     parser.add_argument(
         "--trace-file",
         default=DEFAULT_TRACE_FILE,
-        help=f"Path to JSON file mapping project alias -> trace ID (default: {DEFAULT_TRACE_FILE})",
+        help=(
+            "Path to JSON file mapping alias -> trace ID "
+            f"(default: {DEFAULT_TRACE_FILE})"
+        ),
     )
     args = parser.parse_args()
-    trace_file = Path(args.trace_file)
-    return asyncio.run(_run_validation(trace_file))
+    return asyncio.run(_run_validation(Path(args.trace_file)))
 
 
 if __name__ == "__main__":

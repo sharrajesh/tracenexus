@@ -29,7 +29,7 @@ def main():
         "--sse-port",
         type=int,
         default=52735,
-        help="Port for SSE transport (Windsurf)",
+        help="Port for SSE transport",
     )
     parser.add_argument(
         "--host",

@@ -45,7 +45,20 @@ make stop
 ```bash
 make format
 make test
-make validate-traces
+```
+
+## Internal Ad-hoc Validation (Optional)
+
+This check is intended for internal operational verification.
+
+```bash
+make adhoc-validate-traces
+```
+
+Use a different file if needed:
+
+```bash
+make adhoc-validate-traces ADHOC_TRACE_FILE=path/to/trace_ids.json
 ```
 
 ## Build And Publish Helpers
@@ -64,5 +77,3 @@ make publish
 - `tracenexus/cli.py`: CLI entrypoint and env loading.
 - `tracenexus/server/mcp_server.py`: MCP tool registration and server startup.
 - `tracenexus/providers/`: LangSmith/Langfuse provider integrations.
-- `validation/langfuse_trace_ids.json`: Known trace IDs used by `make validate-traces`.
-- `scripts/validate_traces.py`: Validation runner.

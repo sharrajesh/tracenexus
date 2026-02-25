@@ -43,7 +43,7 @@ LANGSMITH_NAMES="prod,dev"
 LANGFUSE_NAMES="dev,prod,staging,nightly,services"
 LANGFUSE_PUBLIC_KEYS="pk_dev,pk_prod,pk_staging,pk_nightly,pk_services"
 LANGFUSE_SECRET_KEYS="sk_dev,sk_prod,sk_staging,sk_nightly,sk_services"
-LANGFUSE_HOSTS="https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net"
+LANGFUSE_HOSTS="https://cloud.langfuse.com,https://cloud.langfuse.com,https://cloud.langfuse.com,https://cloud.langfuse.com,https://cloud.langfuse.com"
 ```
 
 Rules:
@@ -92,16 +92,6 @@ TraceNexus exposes tools in this format:
 - `langfuse_<name>_get_trace`
 
 If a configured name contains dashes, they become underscores in tool names.
-
-## Verify Trace Access
-
-If you are running from source, you can verify known Langfuse traces with:
-
-```bash
-make validate-traces
-```
-
-This checks the mappings in `validation/langfuse_trace_ids.json` against your configured keys.
 
 ## Troubleshooting
 
