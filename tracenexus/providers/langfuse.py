@@ -50,7 +50,15 @@ class LangfuseProvider:
                 return f"Error fetching trace from {self.name}: {str(e)}"
 
     def normalize_trace(self, trace_data: Any) -> str:
-        trace_as_dict = trace_data.model_dump()
+        # Langfuse SDK models can be Pydantic v1 (`dict`) or v2 (`model_dump`)
+        if hasattr(trace_data, "model_dump"):
+            trace_as_dict = trace_data.model_dump()
+        elif hasattr(trace_data, "dict"):
+            trace_as_dict = trace_data.dict()
+        elif isinstance(trace_data, dict):
+            trace_as_dict = trace_data
+        else:
+            trace_as_dict = {"raw_trace": str(trace_data)}
         return yaml.dump(
             trace_as_dict,
             sort_keys=False,

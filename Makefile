@@ -37,6 +37,11 @@ test: install-dev ## Run tests (with coverage)
 	@echo "Running tests with coverage..."
 	poetry run pytest tests/ --cov=tracenexus --cov-report=term-missing
 
+.PHONY: validate-traces
+validate-traces: ## Validate known Langfuse traces from validation/langfuse_trace_ids.json
+	@echo "Validating configured Langfuse traces..."
+	poetry run python scripts/validate_traces.py
+
 .PHONY: clean
 clean: ## Clean up python cache files and build artifacts
 	@echo "Cleaning up cache files and build artifacts..."

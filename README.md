@@ -1,220 +1,118 @@
 # TraceNexus
 
-> **⚠️ WORK IN PROGRESS ⚠️**
+> **WORK IN PROGRESS**
 >
-> This project is currently under active development and should be considered experimental. 
-> Features may change, and stability is not guaranteed.
->
-> Please DM the author if you have any comments, suggestions, or would like to contribute!
+> This project is under active development and should be considered experimental.
 
-A platform-agnostic MCP (Model Context Protocol) server for LLM observability, supporting platforms like LangSmith and Langfuse. It runs **both** transport protocols simultaneously: `streamable-http` (for Cursor) and `SSE` (for Windsurf) using FastMCP 2.0.
+TraceNexus is an MCP (Model Context Protocol) server for LLM observability traces.
+It currently supports LangSmith and Langfuse and runs both MCP transports:
 
-## Features
+- `streamable-http` for clients like Cursor
+- `sse`
 
-- 🔄 Support for multiple tracing platforms through a unified interface
-- 🛠️ MCP tools for retrieving and analyzing traces
-- 📊 Trace comparison across different platforms
-- 🚀 **Dual transport support**: Runs both `streamable-http` and `SSE` simultaneously
-- 📡 **Cursor compatibility**: `streamable-http` transport on port 52734
-- 🌊 **Windsurf compatibility**: `SSE` transport on port 52735
-- 🤖 **Claude Code compatibility**: Full MCP integration support
-- 🧩 Easy integration with LangSmith and LangFuse
-- 🔧 Use multiple clients at the same time with one server
-
-## Quick Start (for End Users)
-
-This guide provides the quickest way to get the TraceNexus server up and running.
+## Quick Start
 
 ### 1. Prerequisites
 
-- Python 3.9+ (developed with 3.11)
+- Python 3.11+
 
-### 2. Installation
+### 2. Install
 
-1.  **(Optional but Recommended)** Create a dedicated directory and set up a virtual environment:
-    ```bash
-    mkdir ~/my_tracenexus_server
-    cd ~/my_tracenexus_server
-    python -m venv .venv
-    source .venv/bin/activate
-    ```
-
-2.  Install TraceNexus from PyPI:
-    ```bash
-    pip install --upgrade tracenexus
-    ```
-
-### 3. Configuration (API Keys & Settings)
-
-TraceNexus requires API keys for the tracing platforms it supports (e.g., LangSmith, Langfuse).
-
-- Create a `.env` file in your project directory (e.g., `~/my_tracenexus_server/.env` if you followed the optional step above, or in the directory where you run `tracenexus`).
-- Add your API keys and desired default platform to this file. The server automatically loads these settings on startup.
-
-**Example `.env` file:**
-
-```env
-# LangSmith Configuration - Multiple Instances Support
-# Comma-separated API keys for different LangSmith workspaces/projects
-LANGSMITH_API_KEYS="prod-api-key,dev-api-key,test-api-key"
-# Names for each instance (will be used in tool names)
-LANGSMITH_NAMES="prod,dev,test"
-# This creates tools: langsmith_prod_get_trace, langsmith_dev_get_trace, langsmith_test_get_trace
-
-# Langfuse Configuration - Multiple Instances Support
-# Comma-separated configuration for different Langfuse projects/environments
-LANGFUSE_PUBLIC_KEYS="pub-key-1,pub-key-2,pub-key-3"
-LANGFUSE_SECRET_KEYS="secret-key-1,secret-key-2,secret-key-3"
-LANGFUSE_HOSTS="https://cloud.langfuse.com,https://cloud.langfuse.com,https://self-hosted.example.com"
-# Names for each instance (will be used in tool names)
-LANGFUSE_NAMES="prod,dev,test"
-# This creates tools: langfuse_prod_get_trace, langfuse_dev_get_trace, langfuse_test_get_trace
+```bash
+pip install --upgrade tracenexus
 ```
 
-**Note:** 
-- For LangSmith: The number of names should match the number of API keys
-- For Langfuse: The number of public keys, secret keys, hosts, and names should all match
-- If names are not provided or don't match, auto-generated names (instance1, instance2, etc.) will be used
+### 3. Configure
 
-Refer to `tracenexus/cli.py` (if installed from source) or use `tracenexus --help` for details on how provider-specific API keys are checked at startup.
+Create a `.env` file where you run `tracenexus`.
 
-### 4. Running the Server
+If you are running from a cloned repo, start with:
 
-Once installed and configured, run the server using:
+```bash
+cp .env.example .env
+```
+
+Example `.env`:
+
+```env
+# LangSmith configuration (comma-separated)
+LANGSMITH_API_KEYS="prod-api-key,dev-api-key"
+LANGSMITH_NAMES="prod,dev"
+
+# Langfuse configuration (comma-separated)
+LANGFUSE_NAMES="dev,prod,staging,nightly,services"
+LANGFUSE_PUBLIC_KEYS="pk_dev,pk_prod,pk_staging,pk_nightly,pk_services"
+LANGFUSE_SECRET_KEYS="sk_dev,sk_prod,sk_staging,sk_nightly,sk_services"
+LANGFUSE_HOSTS="https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net,https://langfuse.services.attackiq.net"
+```
+
+Rules:
+
+- Values are positional. Item `N` in each list must describe the same project.
+- If multiple projects share one host, repeat that host value.
+- Restart `tracenexus` after `.env` changes.
+
+### 4. Run
+
 ```bash
 tracenexus
 ```
 
-This will start **both transport protocols simultaneously**:
-- **📡 Streamable-HTTP** (Cursor): `http://localhost:52734/mcp`
-- **🌊 SSE** (Windsurf): `http://localhost:52735/sse`
+Default endpoints:
 
-To see all available command-line options, including changing ports:
+- HTTP: `http://localhost:52734/mcp`
+- SSE: `http://localhost:52735/sse`
+
+### 5. Connect Your MCP Client
+
+For Claude Code:
+
 ```bash
-tracenexus --help
+claude mcp add tracenexus --transport streamable-http --url http://localhost:52734/mcp
 ```
 
-**Custom ports example:**
-```bash
-tracenexus --http-port 8000 --sse-port 8001
-```
-
-### 5. Using with MCP Client Applications
-
-TraceNexus runs both transport protocols simultaneously, so you can use **Claude Code, Cursor, and Windsurf at the same time**!
-
-#### For Claude Code
-
-1. **Follow steps 1-3 from the Quick Start section above** to install TraceNexus and set up your `.env` file with API keys.
-
-2. **Start the TraceNexus server:**
-   ```bash
-   tracenexus
-   ```
-
-3. **Add TraceNexus to Claude Code using the CLI:**
-   ```bash
-   # Recommended: Use streamable-http transport for better stability
-   claude mcp add tracenexus --transport streamable-http --url http://localhost:52734/mcp
-   
-   # Alternative: SSE transport (may have initialization issues)
-   # claude mcp add tracenexus --transport sse --url http://localhost:52735/sse
-   ```
-
-That's it! Claude Code can now use the trace retrieval tools. Tool names follow the pattern `langsmith_<instance_name>_get_trace` and `langfuse_<instance_name>_get_trace` where instance names come from your configuration (with dashes converted to underscores).
-
-To verify it's working, you can ask Claude: "What MCP tools do you have available?"
-
-#### For Cursor (Streamable-HTTP)
-
-1.  Ensure the TraceNexus server is running (e.g., via `tracenexus`).
-2.  In Cursor's MCP server settings, add:
+For Cursor:
 
 ```json
 {
   "mcpServers": {
     "tracenexus": {
       "transport": "streamable-http",
-      "url": "http://localhost:52734/mcp" 
+      "url": "http://localhost:52734/mcp"
     }
   }
 }
 ```
 
-#### For Windsurf (SSE)
+## Tool Naming
 
-1.  Ensure the TraceNexus server is running (e.g., via `tracenexus`).
-2.  In Windsurf's MCP server settings, add:
+TraceNexus exposes tools in this format:
 
-```json
-{
-  "mcpServers": {
-    "tracenexus": {
-      "serverUrl": "http://localhost:52735/sse"
-    }
-  }
-}
-```
+- `langsmith_<name>_get_trace`
+- `langfuse_<name>_get_trace`
 
-**Note**: Both configurations can be used simultaneously with the same server instance!
+If a configured name contains dashes, they become underscores in tool names.
 
-## Available Tools
+## Verify Trace Access
 
-Once running, the server exposes the following MCP tools:
-
-### LangSmith Tools (Multiple Instances)
--   **`langsmith_<name>_get_trace`**: Retrieve a single trace by ID from a specific LangSmith instance
-    - Example: `langsmith_prod_get_trace`, `langsmith_dev_get_trace`, `langsmith_test_get_trace`
-    - The actual tool names depend on your `LANGSMITH_NAMES` configuration
-
-### Langfuse Tools (Multiple Instances)
--   **`langfuse_<name>_get_trace`**: Retrieve a single trace by ID from a specific Langfuse instance
-    - Example: `langfuse_prod_get_trace`, `langfuse_dev_get_trace`, `langfuse_test_get_trace`
-    - The actual tool names depend on your `LANGFUSE_NAMES` configuration
-
-An example Python client showing how to connect and use these tools can be found in `examples/client.py`.
-
-## Development Setup
-
-If you want to contribute to TraceNexus, modify the source code, or run it directly from a cloned repository, follow these steps.
-
-### 1. Prerequisites
-
-- Python 3.9+ (developed with 3.11)
-- Poetry (for dependency management)
-
-### 2. Installation & Setup (from Source)
+If you are running from source, you can verify known Langfuse traces with:
 
 ```bash
-# Clone the repository
-git clone https://github.com/sharrajesh/tracenexus.git
-cd tracenexus
-
-# Install dependencies (including development dependencies)
-make install-dev
-# or poetry install --with dev
+make validate-traces
 ```
 
-### 3. Configuration
-Follow the same `.env` file configuration steps outlined in "Quick Start (for End Users) -> 3. Configuration". Place the `.env` file in the root of the cloned `tracenexus` directory.
+This checks the mappings in `validation/langfuse_trace_ids.json` against your configured keys.
 
-### 4. Running the Server (from Source)
+## Troubleshooting
 
-```bash
-# Run the TraceNexus server (runs both transports: HTTP on 52734, SSE on 52735)
-make run
-```
-This uses `poetry run tracenexus`. You can also run `poetry run tracenexus --help` for options.
-
-## Development
-
-- **Formatting, Linting & Type Checking**: `make format` (uses `isort` and `black` to reformat code, `ruff` to check and auto-fix linting issues, and `mypy` for type checking).
-- **Tests**: `make test`
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+- `404 ... not found within authorized project`: Key is valid, but mapped to the wrong project for that trace ID.
+- `401 ... invalid credentials`: Key and host do not belong together.
+- Tool names not updated after changing `.env`: Restart `tracenexus`.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributor/developer workflow is documented in `CONTRIBUTING.md`.
+
+## License
+
+This project is licensed under MIT. See `LICENSE.md`.
