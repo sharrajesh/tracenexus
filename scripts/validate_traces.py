@@ -21,7 +21,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tracenexus.providers.langfuse import LangfuseProviderFactory
 
-
 DEFAULT_TRACE_FILE = "validation/langfuse_trace_ids.json"
 
 
