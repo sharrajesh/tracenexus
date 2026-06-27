@@ -28,8 +28,8 @@ class LangfuseProvider:
     async def get_trace(self, trace_id: str) -> str:
         logger.info(f"Getting trace {trace_id} from Langfuse ({self.name})")
         try:
-            fetch_response = await asyncio.to_thread(self.client.fetch_trace, trace_id)
-            return self.normalize_trace(fetch_response.data)
+            trace = await asyncio.to_thread(self.client.api.trace.get, trace_id)
+            return self.normalize_trace(trace)
         except Exception as e:
             # Check if it's a not found error
             error_msg = str(e).lower()

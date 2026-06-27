@@ -176,17 +176,12 @@ async def test_langfuse_provider_get_trace_success():
     }
     mock_trace_details_obj.model_dump.return_value = expected_dict_representation
 
-    # This mock represents the FetchTraceResponse object
-    mock_fetch_response_obj = MagicMock()
-    mock_fetch_response_obj.data = mock_trace_details_obj
-
     with patch(
         "tracenexus.providers.langfuse.Langfuse"
     ) as MockLangfuseClientConstructor:
         mock_langfuse_client_instance = MockLangfuseClientConstructor.return_value
-        # Mock the fetch_trace method to return our mock_fetch_response_obj
-        mock_langfuse_client_instance.fetch_trace = MagicMock(
-            return_value=mock_fetch_response_obj
+        mock_langfuse_client_instance.api.trace.get = MagicMock(
+            return_value=mock_trace_details_obj
         )
 
         provider = LangfuseProvider(
@@ -233,7 +228,7 @@ async def test_langfuse_provider_get_trace_not_found():
         mock_langfuse_client_instance = MockLangfuseClientConstructor.return_value
 
         # Simulate a not found error
-        mock_langfuse_client_instance.fetch_trace = MagicMock(
+        mock_langfuse_client_instance.api.trace.get = MagicMock(
             side_effect=Exception("Trace not found")
         )
 
@@ -248,7 +243,7 @@ async def test_langfuse_provider_get_trace_not_found():
 
         assert "Trace not found in test" in result
         assert "non-existent-trace-id" in result
-        mock_langfuse_client_instance.fetch_trace.assert_called_once_with(
+        mock_langfuse_client_instance.api.trace.get.assert_called_once_with(
             "non-existent-trace-id"
         )
 
