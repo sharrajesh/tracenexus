@@ -32,6 +32,13 @@ install-dev: lock ## Install development dependencies
 	@echo "Installing development dependencies..."
 	poetry install --with dev
 
+.PHONY: install
+install: install-dev ## Alias for install-dev
+
+.PHONY: dev
+dev: install-dev ## Alias for install-dev
+	@:
+
 .PHONY: test
 test: install-dev ## Run tests (with coverage)
 	@echo "Running tests with coverage..."
@@ -52,6 +59,22 @@ clean: ## Clean up python cache files and build artifacts
 	find . -type f -name "*.pyd" -delete 2>/dev/null || true
 	rm -rf dist/ build/ 2>/dev/null || true
 	rm -rf .pytest_cache/ .ruff_cache/ .coverage htmlcov/ .mypy_cache/ .tox/ 2>/dev/null || true
+
+.PHONY: clean-venv
+clean-venv: ## Remove Poetry virtual environment
+	@echo "Removing Poetry virtual environment..."
+	@if ! command -v poetry >/dev/null 2>&1; then \
+		echo "Poetry is not installed"; \
+		exit 1; \
+	fi
+	@if poetry env info --path >/dev/null 2>&1; then \
+		poetry env remove --all; \
+	else \
+		echo "No Poetry virtual environment found"; \
+	fi
+
+.PHONY: reset-dev
+reset-dev: clean clean-venv install-dev ## Remove caches, recreate venv, and install dev dependencies
 
 .PHONY: build
 build: ## Build the package using poetry
