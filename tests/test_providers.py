@@ -11,6 +11,27 @@ from tracenexus.providers.langfuse import LangfuseProvider, LangfuseProviderFact
 from tracenexus.providers.langsmith import LangSmithProvider, LangSmithProviderFactory
 
 
+def test_provider_initialization_does_not_log_credentials(caplog):
+    """Provider startup logs must never reveal credential material."""
+    with (
+        patch("tracenexus.providers.langsmith.Client"),
+        patch("tracenexus.providers.langfuse.Langfuse"),
+        caplog.at_level("INFO"),
+    ):
+        LangSmithProvider(api_key="unique-langsmith-secret", name="langsmith-test")
+        LangfuseProvider(
+            public_key="unique-langfuse-public-key",
+            secret_key="unique-langfuse-secret-key",
+            host="https://test.com",
+            name="langfuse-test",
+        )
+
+    assert "unique-langsmith" not in caplog.text
+    assert "unique-langfuse" not in caplog.text
+    assert "langsmith-test" in caplog.text
+    assert "langfuse-test" in caplog.text
+
+
 @pytest.mark.asyncio
 async def test_langsmith_provider_get_trace_success():
     """Test LangSmithProvider.get_trace functionality."""

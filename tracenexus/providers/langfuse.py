@@ -15,10 +15,7 @@ class LangfuseProvider:
         self, public_key: str, secret_key: str, host: str, name: str = "default"
     ):
         self.name = name
-        logger.info(f"Initializing Langfuse provider '{name}' with host: {host}")
-        logger.info(
-            f"Public key: {public_key[:5]}-xxxxx, Secret key: {secret_key[:5]}-xxxxx"
-        )
+        logger.info("Initializing Langfuse provider '%s' with host: %s", name, host)
         self.client = Langfuse(
             public_key=public_key,
             secret_key=secret_key,

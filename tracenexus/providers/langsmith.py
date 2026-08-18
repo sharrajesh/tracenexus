@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 class LangSmithProvider:
     def __init__(self, api_key: str, name: str = "default"):
         self.name = name
-        logger.info(
-            f"Initializing LangSmith provider '{name}' with API key: {api_key[:5]}xxxxx"
-        )
+        logger.info("Initializing LangSmith provider '%s'", name)
         self.client = Client(api_key=api_key)
 
     async def get_trace(self, trace_id: str) -> str:
